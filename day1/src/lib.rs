@@ -92,7 +92,7 @@ enum SumResult {
 }
 
 fn read_numbers(config: &Config) -> io::Result<Vec<i32>> {
-    let lines = read_lines(config.filename.clone())?;
+    let lines = read_lines(&config.filename)?;
 
     let mut numbers: Vec<i32> = Vec::new();
     // Consumes the iterator, returns an (Optional) String
@@ -108,7 +108,7 @@ fn read_numbers(config: &Config) -> io::Result<Vec<i32>> {
     return Ok(numbers);
 }
 
-fn read_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
+fn read_lines<P>(filename: &P) -> io::Result<io::Lines<io::BufReader<File>>>
 where P: AsRef<Path>, {
     let file = File::open(filename)?;
     Ok(io::BufReader::new(file).lines())

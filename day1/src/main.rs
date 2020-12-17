@@ -1,7 +1,7 @@
 use std::env;
 use std::process;
 
-use day1puzzle1::Config;
+use day1::Config;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -14,7 +14,7 @@ fn main() {
     println!("Searching for sum {} with {} numbers", config.sum, config.variables);
     println!("In file {}", config.filename);
 
-    if let Err(e) = day1puzzle1::run(config) {
+    if let Err(e) = day1::run(config) {
         println!("Application error: {}", e);
         process::exit(1);
     }
