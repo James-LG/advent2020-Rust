@@ -1,72 +1,124 @@
-use std::fs::File;
 use std::error::Error;
-use std::io::{self, BufRead};
-use std::path::Path;
+use std::io;
+
+use common;
 
 pub struct Config {
-    pub filename: String,
-    pub sum: i32,
-    pub variables: usize,
+    filename: String,
+    sum: i32,
+    num_variables: usize,
 }
 
 impl Config {
-    pub fn new(args: &[String]) -> Result<Config, &'static str> {
-        if args.len() < 4 {
-            return Err("Not enough arguments");
-        }
+    pub fn new(args: Vec<String>) -> Result<Config, &'static str> {
+        let mut args = args.into_iter();
 
-        let filename = args[1].clone();
-        let sum_result = args[2].parse();
-        let variables_result = args[3].parse();
+        let filename = match args.next() {
+            Some(arg) => {
+                // Check for default arguments and short circuit if matched
+                match arg.as_str() {
+                    "--part1" => return Ok(Config {
+                            filename: String::from("day1/data.txt"),
+                            sum: 2020,
+                            num_variables: 2,
+                        }),
+                    "--part2" => return Ok(Config {
+                        filename: String::from("day1/data.txt"),
+                            sum: 2020,
+                            num_variables: 3,
+                        }),
+                    _ => arg,
+                }
+            },
+            None => return Err("'Filename' parameter not supplied"),
+        };
 
-        return match (sum_result, variables_result) {
-            (Ok(sum), Ok(variables)) => Ok(Config { filename, sum, variables }),
-            (Err(_), _) => Err("Sum must be an integer"),
-            (_, Err(_)) => Err("Variables must be an integer"),
+        let sum = match args.next() {
+            Some(arg) => arg,
+            None => return Err("'Sum' parameter not supplied"),
+        }.parse();
+
+        let num_variables = match args.next() {
+            Some(arg) => arg,
+            None => return Err("'Number of variables' parameter not supplied"),
+        }.parse();
+
+        return match (sum, num_variables) {
+            (Ok(sum), Ok(num_variables)) => Ok(Config { filename, sum, num_variables }),
+            (Err(_), _) => Err("'Sum' parameter must be an integer"),
+            (_, Err(_)) => Err("'Number of variables' parameter must be an integer"),
         }
     }
 }
 
-pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
-    let numbers = read_numbers(&config)?;
-
-    match find_numbers_for(&numbers, &config) {
-        Ok(numbers) => {
-            let sum: i32 = numbers.iter().sum();
-            let mut product = 1;
-            for num in &numbers {
-                product *= num;
-            }
-            println!("{:?} {} {}", numbers, sum, product);
-        },
-        Err(msg) => println!("Error finding numbers: {}", msg),
-    };
-
-    Ok(())
+enum SumResult {
+    TooSmall(Vec<i32>),
+    TooBig(Vec<i32>),
+    Equal(Vec<i32>),
+    Error,
 }
 
-fn find_numbers_for(numbers: &Vec<i32>, config: &Config) -> Result<Vec<i32>, &'static str> {
+pub fn run(config: common::Config) -> Result<(), Box<dyn Error>> {
+    let config = Config::new(config.args)?;
+    let numbers = read_numbers(&config)?;
+
+    match find_numbers(numbers, &config) {
+        Ok(result) => {
+            println!("Numbers: {:?} Sum: {} Product: {}", result.numbers, result.sum, result.product);
+            Ok(())
+        },
+        Err(msg) => {
+            println!("Error finding numbers: {}", msg);
+            Err(msg)?
+        },
+    }
+}
+
+struct SearchResult {
+    numbers: Vec<i32>,
+    sum: i32,
+    product: i32,
+}
+
+impl SearchResult {
+    fn new(numbers: Vec<i32>) -> SearchResult {
+        let sum: i32 = numbers.iter().sum();
+        let product: i32 = numbers.iter().product();
+
+        SearchResult {
+            numbers,
+            sum,
+            product,
+        }
+    }
+}
+
+fn find_numbers(numbers: Vec<i32>, config: &Config) -> Result<SearchResult, &'static str> {
     let selected: Vec<i32> = Vec::new();
-    return match find_numbers_internal(numbers, &selected, config) {
-        SumResult::Equal(numbers) => Ok(numbers),
+    return match find_numbers_internal(&numbers, selected, config) {
+        SumResult::Equal(numbers) => Ok(SearchResult::new(numbers)),
         _ => Err("Could not find matching numbers"),
     }
 }
 
-fn find_numbers_internal(numbers: &Vec<i32>, selected: &Vec<i32>, config: &Config) -> SumResult {
+fn find_numbers_internal(numbers: &Vec<i32>, selected: Vec<i32>, config: &Config) -> SumResult {
     let sum: i32 = selected.iter().sum();
 
-    if selected.len() == config.variables {
+    if selected.len() == config.num_variables {
         if sum == config.sum {
             return SumResult::Equal(selected.clone());
         } else if sum > config.sum {
             return SumResult::TooBig(selected.clone());
         } else {
-            return SumResult::TooSmall;
+            return SumResult::TooSmall(selected.clone());
         }
     }
 
     for x in numbers {
+        if selected.contains(x) {
+            continue;
+        }
+
         if selected.len() == 0 {
             println!("First number of search: {}", x);
         }
@@ -74,31 +126,25 @@ fn find_numbers_internal(numbers: &Vec<i32>, selected: &Vec<i32>, config: &Confi
         let mut new_selected = selected.clone();
         new_selected.push(*x);
         
-        let internal_result = find_numbers_internal(numbers, &new_selected, config);
+        let internal_result = find_numbers_internal(numbers, new_selected, config);
+
         match internal_result {
             SumResult::TooBig(_) => break,
             SumResult::Equal(numbers) => return SumResult::Equal(numbers),
-            SumResult::TooSmall => (),
-        }
+            result => result,
+        };
     }
 
-    return SumResult::TooSmall;
-}
-
-enum SumResult {
-    TooSmall,
-    TooBig(Vec<i32>),
-    Equal(Vec<i32>),
+    return SumResult::Error;
 }
 
 fn read_numbers(config: &Config) -> io::Result<Vec<i32>> {
-    let lines = read_lines(&config.filename)?;
+    let lines = common::read_lines(&config.filename)?;
 
     let mut numbers: Vec<i32> = Vec::new();
-    // Consumes the iterator, returns an (Optional) String
     for line in lines {
-        if let Ok(ip) = line {
-            if let Ok(num) = ip.parse() {
+        if let Ok(line) = line {
+            if let Ok(num) = line.parse() {
                 numbers.push(num);
             }
         }
@@ -108,8 +154,62 @@ fn read_numbers(config: &Config) -> io::Result<Vec<i32>> {
     return Ok(numbers);
 }
 
-fn read_lines<P>(filename: &P) -> io::Result<io::Lines<io::BufReader<File>>>
-where P: AsRef<Path>, {
-    let file = File::open(filename)?;
-    Ok(io::BufReader::new(file).lines())
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn search_result_new_should_calculate() {
+        // arrange
+        let numbers = vec![1, 2, 3, 4];
+        let numbers_clone = numbers.clone();
+
+        // act
+        let result = SearchResult::new(numbers);
+
+        // assert
+        assert_eq!(numbers_clone, result.numbers);
+        assert_eq!(10, result.sum);
+        assert_eq!(24, result.product);
+    }
+
+    #[test]
+    fn find_numbers_should_find_two() {
+        // arrange
+        let args = vec![
+            String::from("_"),
+            String::from("5"),
+            String::from("2")];
+
+        let config = Config::new(args).unwrap();
+
+        let numbers = vec![1, 2, 3, 5];
+
+        // act
+        let result = find_numbers(numbers, &config).unwrap();
+
+        // assert
+        assert_eq!(vec![2, 3], result.numbers);
+        assert_eq!(5, result.sum);
+    }
+
+    #[test]
+    fn find_numbers_should_find_three() {
+        // arrange
+        let args = vec![
+            String::from("_"),
+            String::from("9"),
+            String::from("3")];
+
+        let config = Config::new(args).unwrap();
+
+        let numbers = vec![1, 2, 3, 4];
+
+        // act
+        let result = find_numbers(numbers, &config).unwrap();
+
+        // assert
+        assert_eq!(vec![2, 3, 4], result.numbers);
+        assert_eq!(9, result.sum);
+    }
 }

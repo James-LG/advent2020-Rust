@@ -1,5 +1,5 @@
 [package]
-name = "day2p1"
+name = "common"
 version = "0.1.0"
 authors = ["james"]
 edition = "2018"
