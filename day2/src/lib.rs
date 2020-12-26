@@ -1,45 +1,8 @@
 use std::error::Error;
 
-struct Config {
-    filename: String,
-    part: i32,
-}
+mod config;
 
-impl Config {
-    fn new(args: Vec<String>) -> Result<Config, &'static str> {
-        let mut args = args.into_iter();
-
-        let filename = match args.next() {
-            Some(arg) => {
-                // Check for default arguments and short circuit if matched
-                match arg.as_str() {
-                    "--part1" => return Ok(Config {
-                            filename: String::from("day2/data.txt"),
-                            part: 1
-                        }),
-                    "--part2" => return Ok(Config {
-                        filename: String::from("day2/data.txt"),
-                            part: 2
-                        }),
-                    _ => arg,
-                }
-            },
-            None => return Err("'Filename' parameter not supplied"),
-        };
-
-        let part = match args.next() {
-            Some(arg) => arg,
-            None => return Err("'Part' parameter not supplied"),
-        }.parse::<i32>();
-
-        let part = match part {
-            Ok(p) => p,
-            Err(_) => return Err("'Part' parameter must be an integer"),
-        };
-
-        return Ok(Config{ filename, part });
-    }
-}
+use config::Config;
 
 pub fn run(config: common::Config) -> Result<(), Box<dyn Error>> {
     let config = Config::new(config.args)?;
@@ -102,7 +65,7 @@ fn read_passwords(config: &Config) -> Result<Vec<Password>, Box<dyn Error>> {
 
             return Ok(passwords);
         },
-        Err(err) => return Err(err)?,
+        Err(err) => return Err(err.into()),
     }
 }
 

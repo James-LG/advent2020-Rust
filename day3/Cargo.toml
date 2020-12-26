@@ -1,5 +1,5 @@
 [package]
-name = "advent"
+name = "day3"
 version = "0.1.0"
 authors = ["james"]
 edition = "2018"
@@ -8,6 +8,3 @@ edition = "2018"
 
 [dependencies]
 common = { path = "../common" }
-day1 = { path = "../day1" }
-day2 = { path = "../day2" }
-day3 = { path = "../day3" }

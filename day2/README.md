@@ -2,7 +2,7 @@
 
 https://adventofcode.com/2020/day/2
 
-Run using `cargo run day1 {FILENAME} {PART_NUM}`.
+Run using `cargo run day2 {FILENAME} {PART_NUM}`.
 
 `{PART_NUM}` values are `1` or `2`.
 
