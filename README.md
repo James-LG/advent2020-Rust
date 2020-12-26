@@ -6,7 +6,7 @@ https://adventofcode.com/ year 2020. Written in Rust-lang.
 
 Use `cargo run {PUZZLE}` to run a specific puzzle.
 
-Currently puzzle options:
+Current `{PUZZLE}` values:
 
-* `day1`
-* `day2`
+* [`day1`](day1/README.md)
+* [`day2`](day2/README.md)
